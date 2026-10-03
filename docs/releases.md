@@ -37,6 +37,7 @@ architectures and older glibc versions are not promised.
 
 ```sh
 dart pub get --enforce-lockfile
+dart run legal check --include-sdk
 dart run melos run build
 # Optional release-tag validation and metadata:
 dart run melos run release:package -- v0.1.0
@@ -62,8 +63,11 @@ scans locally resolved dependency manifests, package_config.json and pubspec.loc
 Packaging uses its typed API to check the configured policy **and** render the
 original license/notice documents. It follows the runtime dependency closure,
 including shared runtime/dev transitives, and excludes development-only tools.
-The root application is excluded. Notices conservatively cover the whole runtime
-closure even when AOT tree shaking removes some code. No network license lookup
+The root application is excluded. `include_sdk: true` enables the SDK inventory
+(the CLI equivalent is `--include-sdk`). Packaging also explicitly selects the
+SDK running the AOT build. The SDK license is checked and rendered by legal as
+`dart-sdk`; it is no longer manually appended. Notices conservatively cover the
+whole runtime closure even when AOT tree shaking removes some code. No network license lookup
 is performed after dependency resolution.
 
 The pubspec policy permits MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0 and ISC;
@@ -74,8 +78,8 @@ renderer preserves the original license and notice documents.
 
 The wrapper additionally preserves nested LICENSE, LICENCE, COPYING and NOTICE
 files outside legal's root/`LICENSES` scan, vendored CSI/Google schema licenses
-and copyright headers, and the embedded Dart runtime's license and native
-third-party notices. SDK version/revision and native-notice checksums are checked
+and copyright headers, and the embedded Dart runtime's native third-party
+notices. SDK version/revision and native-notice checksums are checked
 before packaging. Missing or unresolved evidence, rejected policy, version/tag
 mismatches or changed native evidence fail the build.
 
@@ -83,7 +87,9 @@ Native notices in `licenses/dart-runtime` follow the exact Dart 3.13.4 revision
 recorded in `sources.json` and its DEPS/build definitions. They include BoringSSL,
 ICU, zlib, double-conversion and conservative notices for libc++, libc++abi,
 cpu_features and Perfetto. Review the manifest and runtime build definitions on
-SDK upgrades; legal does not scan native/runtime code. These notices do not
+SDK upgrades; `--include-sdk` reads SDK-supplied licenses but does not establish
+which native components were linked or fetch missing upstream notices. Our pinned
+native supplements remain necessary for that reason. These notices do not
 replace the BSD-3-Clause project license in the repository root.
 
 BSD and MIT redistribution requires preserving applicable notices and terms;

@@ -113,6 +113,45 @@ void main() {
       }
     },
   );
+  test('configured SDK inclusion renders original SDK evidence and rejects missing evidence', () async {
+    final project = await LegalProject.load('.');
+    expect(project.config.includeSdk, isTrue);
+    final sdk = await Directory.systemTemp.createTemp('csi-sdk-');
+    try {
+      await File('${sdk.path}/version').writeAsString('3.13.4\n');
+      final original = await File(
+        '${File(Platform.resolvedExecutable).parent.parent.path}/LICENSE',
+      ).readAsString();
+      await File('${sdk.path}/LICENSE').writeAsString(original);
+      final report = await project.scan(includeDev: false, sdkPath: sdk.path);
+      final sdkEntry = report.packages.singleWhere(
+        (p) => p.dependency.source == 'sdk',
+      );
+      expect(sdkEntry.dependency.name, 'dart-sdk');
+      expect(sdkEntry.dependency.version, '3.13.4');
+      final text = checkedNotices(report, project.config.policy);
+      expect(text, contains('dart-sdk 3.13.4'));
+      expect(text, contains(original));
+      // Package supplements must not recursively walk the entire SDK tree.
+      await Directory('${sdk.path}/nested').create();
+      await File('${sdk.path}/nested/LICENSE')
+          .writeAsString('unreviewed SDK fixture');
+      expect(await nestedNotices(LicenseReport([sdkEntry])), isEmpty);
+      await File('${sdk.path}/LICENSE').delete();
+      final missing = await project.scan(includeDev: false, sdkPath: sdk.path);
+      expect(
+        () => checkedNotices(missing, project.config.policy),
+        throwsStateError,
+      );
+      await File('${sdk.path}/version').delete();
+      await expectLater(
+        project.scan(includeDev: false, sdkPath: sdk.path),
+        throwsA(isA<LegalException>()),
+      );
+    } finally {
+      await sdk.delete(recursive: true);
+    }
+  });
   test(
     'ZIP retains binary and notices together and removes stale archive entries',
     () async {

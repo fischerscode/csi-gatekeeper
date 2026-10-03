@@ -28,6 +28,8 @@ String checkedNotices(LicenseReport report, LicensePolicy policy) {
 Future<String> nestedNotices(LicenseReport report) async {
   final text = StringBuffer();
   for (final package in report.packages) {
+    // SDK evidence comes from legal; native supplements are pinned below.
+    if (package.dependency.source == 'sdk') continue;
     final directory = Directory.fromUri(package.dependency.root);
     final known = package.documents.map((d) => d.path).toSet();
     final files = await directory
@@ -83,10 +85,17 @@ Future<void> packageRelease({
     multiLine: true,
   ).hasMatch(pubspec))
     throw StateError('Run tool/sync_version.dart before tagging');
-  final report = await project.scan(includeDev: false);
-  final packageTexts = checkedNotices(report, project.config.policy);
-  final runtime = report.packages.map((p) => p.dependency).toList();
   final sdk = File(Platform.resolvedExecutable).parent.parent;
+  final report = await project.scan(
+    includeDev: false,
+    includeSdk: true,
+    sdkPath: sdk.path,
+  );
+  final packageTexts = checkedNotices(report, project.config.policy);
+  final runtime = report.packages
+      .map((p) => p.dependency)
+      .where((p) => p.source != 'sdk')
+      .toList();
   final nativeRoot = Directory('licenses/dart-runtime');
   final manifest = jsonDecode(
     await File('${nativeRoot.path}/sources.json').readAsString(),
@@ -107,10 +116,7 @@ Future<void> packageRelease({
           'These licenses do not set the license of CSI Gatekeeper itself.\n',
         )
         ..write(packageTexts)
-        ..write(await nestedNotices(report))
-        ..writeln(
-          '\n=== Dart SDK ${manifest['sdkVersion']} / embedded runtime ===\n${await File('${sdk.path}/LICENSE').readAsString()}',
-        );
+        ..write(await nestedNotices(report));
   for (final entry
       in (manifest['files'] as List).cast<Map<String, dynamic>>()) {
     final file = File('${nativeRoot.path}/${entry['file']}');

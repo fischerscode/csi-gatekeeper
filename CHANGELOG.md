@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include the build SDK through legal's SDK inventory and policy checks; retain pinned native runtime supplements.
+
 - License project code under BSD-3-Clause and include LICENSE in every build ZIP.
 
 - Produce a Linux x64 ZIP containing the standalone binary and legal notices on every normal build; publish only ZIPs and checksums in CI and releases.

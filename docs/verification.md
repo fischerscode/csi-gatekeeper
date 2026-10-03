@@ -9,13 +9,13 @@ protoc_plugin 25.1.0 and the committed pubspec.lock.
 | `dart run melos list` | Exactly one package, csi_gatekeeper |
 | `dart run melos run format:check` | Passed |
 | `dart run melos run analyze` | No issues |
-| `dart run melos run test` | 29 tests passed |
+| `dart run melos run test` | 30 tests passed |
 | `dart run melos run build` | Native AOT executable and distributable ZIP with legal notices generated |
 | `PROTOC_PATH=... tool/generate.sh` | Source checksums passed; generated Dart files byte-identical on regeneration |
 | AOT executable with no arguments | Expected usage rejection, exit 64 |
 | AOT executable with placeholder example config | Expected sanitized configuration rejection, exit 1 |
 | `dart run melos run release:package -- v0.1.0` | ZIP with notices for 21 runtime packages generated; ZIP SHA-256 check passed |
-| `dart run legal check` | legal 0.2.2 policy passed for all 21 runtime packages without active overrides |
+| `dart run legal check --include-sdk` | legal 0.2.2 policy passed for 21 runtime packages and the build SDK without active overrides |
 | actionlint 1.7.7 on both workflows | Passed |
 | Repeated release packaging | Removed stale ZIP entries; extracted ZIP preserved executable permissions |
 | Official CSI schema vs pinned driver's 1.9.0 schema | SHA-256 identical |

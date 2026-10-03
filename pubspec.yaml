@@ -34,6 +34,7 @@ melos:
           git add lib/src/version.dart pubspec.lock
 
 legal:
+  include_sdk: true
   policy: permissive
   unknown: deny
   # packages:
