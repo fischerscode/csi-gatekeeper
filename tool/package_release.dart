@@ -155,6 +155,7 @@ Future<void> packageRelease({
   final licenseFile = File('$output/THIRD_PARTY_NOTICES.txt');
   await licenseFile.writeAsString(notices.toString());
   await licenseFile.copy('${bundle.path}/THIRD_PARTY_NOTICES.txt');
+  await File('LICENSE').copy('${bundle.path}/LICENSE');
   await File('README.md').copy('${bundle.path}/README.md');
   final docs = await Directory('${bundle.path}/docs').create();
   await for (final file in Directory('docs').list()) {

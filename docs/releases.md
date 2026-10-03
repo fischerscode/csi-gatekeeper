@@ -12,6 +12,7 @@ intermediate; distribute the ZIP so the binary and notices travel together.
 The ZIP contains a versioned directory with:
 
 - `csi-gatekeeper`: the standalone AOT executable, with executable permissions.
+- `LICENSE`: the project's BSD-3-Clause license, copied verbatim.
 - `THIRD_PARTY_NOTICES.txt`: original runtime package licenses and attribution,
   plus Dart runtime and vendored Protobuf notices.
 - `BUILD_INFO.json`, documentation and deployment examples.
@@ -83,7 +84,7 @@ recorded in `sources.json` and its DEPS/build definitions. They include BoringSS
 ICU, zlib, double-conversion and conservative notices for libc++, libc++abi,
 cpu_features and Perfetto. Review the manifest and runtime build definitions on
 SDK upgrades; legal does not scan native/runtime code. These notices do not
-select or grant a license for this project's own code.
+replace the BSD-3-Clause project license in the repository root.
 
 BSD and MIT redistribution requires preserving applicable notices and terms;
 Apache-2.0 requires its license and applicable NOTICE attribution. See the

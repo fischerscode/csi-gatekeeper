@@ -124,6 +124,7 @@ void main() {
         await Process.run('chmod', ['755', '${bundle.path}/csi-gatekeeper']);
         await File('${bundle.path}/THIRD_PARTY_NOTICES.txt')
             .writeAsString('fixture notices');
+        await File('LICENSE').copy('${bundle.path}/LICENSE');
         final archive = File('${dir.path}/bundle.zip');
         await File('${bundle.path}/stale').writeAsString('stale');
         await createZip(bundle, archive);
@@ -132,6 +133,7 @@ void main() {
         final listing = await Process.run('unzip', ['-Z1', archive.path]);
         expect(listing.exitCode, 0);
         expect(listing.stdout, contains('bundle/csi-gatekeeper'));
+        expect(listing.stdout, contains('bundle/LICENSE'));
         expect(listing.stdout, contains('bundle/THIRD_PARTY_NOTICES.txt'));
         expect(listing.stdout, isNot(contains('stale')));
         final unpacked = '${dir.path}/unpacked';
@@ -150,6 +152,10 @@ void main() {
             '$unpacked/bundle/csi-gatekeeper',
           ])).exitCode,
           0,
+        );
+        expect(
+          await File('$unpacked/bundle/LICENSE').readAsString(),
+          await File('LICENSE').readAsString(),
         );
         expect(
           await File('$unpacked/bundle/THIRD_PARTY_NOTICES.txt').readAsString(),

@@ -98,3 +98,9 @@ runs versioning or deploys storage infrastructure. Publishing a GitHub release
 builds and attaches a Linux x64 ZIP containing the standalone executable and
 third-party license notices, plus checksums. Normal CI builds offer the same ZIP.
 See [release packaging and licenses](docs/releases.md).
+
+## License
+
+Project code is licensed under [BSD-3-Clause](LICENSE). Vendored sources and
+dependencies retain their own licenses. Every build ZIP includes the project
+LICENSE and THIRD_PARTY_NOTICES.txt.
