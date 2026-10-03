@@ -1,0 +1,28 @@
+[Unit]
+Description=CSI policy gateway
+After=network.target democratic-csi.service
+Requires=democratic-csi.service
+
+[Service]
+Type=simple
+User=csi-gatekeeper
+Group=csi-gatekeeper
+SupplementaryGroups=democratic-csi
+ExecStart=/opt/csi-gatekeeper/csi-gatekeeper /etc/csi-gatekeeper/config.json
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,24 @@
+name: Check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+        with:
+          sdk: '3.13.4'
+      - run: dart pub get --enforce-lockfile
+      - run: dart run melos run format:check
+      - run: dart run melos run analyze
+      - run: dart run melos run test
+      - run: mkdir -p build && dart run melos run build
+      - name: Verify protobuf regeneration
+        run: |
+          curl -fsSL https://github.com/protocolbuffers/protobuf/releases/download/v33.0/protoc-33.0-linux-x86_64.zip -o /tmp/protoc.zip
+          echo 'd99c011b799e9e412064244f0be417e5d76c9b6ace13a2ac735330fa7d57ad8f  /tmp/protoc.zip' | sha256sum --check
+          unzip -q /tmp/protoc.zip -d /tmp/protoc
+          PROTOC_PATH=/tmp/protoc/bin/protoc tool/generate.sh
+          git diff --exit-code -- lib/src/generated
