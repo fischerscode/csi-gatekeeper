@@ -80,7 +80,19 @@ parameters and unreviewed fields are rejected. Configure CSI sidecars with
 parameters. The cluster owns the entire dedicated storage domain; namespace
 claims do not confer ownership.
 
-For iSCSI run a separate process with `profile: democratic-csi-1.9.3-iscsi`, a
+`driverName` is optional and defaults to `org.democratic-csi` for existing
+configurations. It must be a domain-style CSI name with at most 63 ASCII
+characters, alphanumeric label boundaries, and only alphanumerics, dashes and
+dots. The backend must report exactly this name; mismatches fail GetPluginInfo.
+The value is trusted local configuration and cannot be overridden by requests.
+
+For NFS and iSCSI in the same cluster, use `nfs.csi.atlas.local` and
+`iscsi.csi.atlas.local` respectively. Match each name with democratic-csi's
+`--csi-name`, the node plugin, CSIDriver, StorageClass `provisioner` and
+VolumeSnapshotClass `driver`. See [cluster examples](docs/cluster.md).
+
+For iSCSI, start with [config.iscsi.example.json](deploy/config.iscsi.example.json)
+and run a separate process with `profile: democratic-csi-1.9.3-iscsi`, a
 separate socket and separate dataset parents. Replace `context` with the **exact**
 trusted backend values for `node_attach_driver: iscsi`, `portal`, `portals`,
 `interface`, `iqn` (fixed prefix ending in `{id}`), `lun: "0"`,

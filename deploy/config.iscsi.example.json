@@ -1,0 +1,54 @@
+{
+  "listenAddress": "REPLACE_WITH_LXC_LISTEN_IP",
+  "port": 9443,
+  "certificate": "/REPLACE_WITH_EXTERNAL_TLS_DIRECTORY/server-chain.pem",
+  "privateKey": "/REPLACE_WITH_EXTERNAL_TLS_DIRECTORY/server.key",
+  "clientCa": "/REPLACE_WITH_EXTERNAL_TLS_DIRECTORY/client-ca.pem",
+  "clientSha256": "REPLACE_WITH_64_LOWERCASE_HEX_DIGITS_OF_CLIENT_LEAF_DER_SHA256",
+  "backendSocket": "/REPLACE_WITH_PROTECTED_RUNTIME_DIRECTORY/democratic-csi.sock",
+  "driverName": "iscsi.csi.atlas.local",
+  "profile": "democratic-csi-1.9.3-iscsi",
+  "volumeParent": "REPLACE_POOL/REPLACE_CLUSTER/volumes",
+  "snapshotParent": "REPLACE_POOL/REPLACE_CLUSTER/snapshots",
+  "maxBytes": 1099511627776,
+  "methods": [
+    "GetPluginInfo",
+    "GetPluginCapabilities",
+    "Probe",
+    "ControllerGetCapabilities",
+    "CreateVolume",
+    "DeleteVolume",
+    "ControllerExpandVolume",
+    "ControllerGetVolume",
+    "ListVolumes",
+    "ValidateVolumeCapabilities",
+    "GetCapacity",
+    "CreateSnapshot",
+    "DeleteSnapshot",
+    "ListSnapshots"
+  ],
+  "parameters": {
+    "detachedSnapshots": [
+      "false",
+      "true"
+    ],
+    "detachedVolumesFromSnapshots": [
+      "false",
+      "true"
+    ],
+    "detachedVolumesFromVolumes": [
+      "false",
+      "true"
+    ]
+  },
+  "context": {
+    "node_attach_driver": "iscsi",
+    "portal": "REPLACE_WITH_ISCSI_PORTAL:3260",
+    "portals": "",
+    "interface": "",
+    "iqn": "iqn.REPLACE_WITH_TRUSTED_IQN_PREFIX:{id}",
+    "lun": "0",
+    "provisioner_driver": "zfs-generic-iscsi",
+    "provisioner_driver_instance_id": "REPLACE_WITH_BACKEND_INSTANCE_ID"
+  }
+}

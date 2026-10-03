@@ -306,11 +306,11 @@ class GatewayIdentity extends IdentityServiceBase with StrictWire {
       (o) => g.identity.getPluginInfo(r, options: o),
       (v) {
         only(v, {'name', 'vendorVersion', 'manifest'});
-        if (v.name != 'org.democratic-csi') invalid();
+        if (v.name != g.config.driverName) invalid();
       },
     );
     return GetPluginInfoResponse(
-      name: 'org.democratic-csi',
+      name: g.config.driverName,
       vendorVersion: 'csi-gatekeeper-$packageVersion',
     );
   }

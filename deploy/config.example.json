@@ -6,6 +6,7 @@
   "clientCa": "/REPLACE_WITH_EXTERNAL_TLS_DIRECTORY/client-ca.pem",
   "clientSha256": "REPLACE_WITH_64_LOWERCASE_HEX_DIGITS_OF_CLIENT_LEAF_DER_SHA256",
   "backendSocket": "/REPLACE_WITH_PROTECTED_RUNTIME_DIRECTORY/democratic-csi.sock",
+  "driverName": "org.democratic-csi",
   "profile": "democratic-csi-1.9.3-nfs",
   "volumeParent": "REPLACE_POOL/REPLACE_CLUSTER/volumes",
   "snapshotParent": "REPLACE_POOL/REPLACE_CLUSTER/snapshots",

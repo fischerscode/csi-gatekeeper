@@ -21,7 +21,7 @@ const supportedMethods = <String>{
 /// Local, trusted configuration. No request can change these boundaries.
 class GatewayConfig {
   final String listenAddress, backendSocket, certificate, privateKey, clientCa;
-  final String clientSha256, profile, volumeParent, snapshotParent;
+  final String clientSha256, profile, driverName, volumeParent, snapshotParent;
   final int port, maxBytes;
   final Set<String> methods;
   final Map<String, Set<String>> parameters;
@@ -35,6 +35,7 @@ class GatewayConfig {
       clientCa = json['clientCa'] as String,
       clientSha256 = json['clientSha256'] as String,
       profile = json['profile'] as String,
+      driverName = _driverName(json),
       volumeParent = json['volumeParent'] as String,
       snapshotParent = json['snapshotParent'] as String,
       maxBytes = json['maxBytes'] as int,
@@ -52,6 +53,7 @@ class GatewayConfig {
       'clientCa',
       'clientSha256',
       'profile',
+      'driverName',
       'volumeParent',
       'snapshotParent',
       'maxBytes',
@@ -137,6 +139,21 @@ class GatewayConfig {
       throw const FormatException('Exact backend context templates required');
     }
   }
+  // CSI 1.9 GetPluginInfo requires a domain-style name of at most 63
+  // characters. Explicit null and non-string values are configuration errors.
+  static String _driverName(Map<String, dynamic> json) {
+    if (!json.containsKey('driverName')) return 'org.democratic-csi';
+    final value = json['driverName'];
+    final label = RegExp(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$');
+    if (value is! String ||
+        value.isEmpty ||
+        value.length > 63 ||
+        value.split('.').any((part) => !label.hasMatch(part))) {
+      throw const FormatException('Invalid CSI driver name');
+    }
+    return value;
+  }
+
   bool get isNfs => profile.endsWith('-nfs');
   Map<String, String> contextFor(String id) =>
       context.map((k, v) => MapEntry(k, v.replaceAll('{id}', id)));

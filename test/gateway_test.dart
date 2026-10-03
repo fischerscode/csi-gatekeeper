@@ -388,6 +388,8 @@ void main() {
     () async {
       for (final key in [
         'config',
+        'driverName',
+        'csi-name',
         'load-config-from-pvc',
         'mountpoint',
         'datasetParentName',
