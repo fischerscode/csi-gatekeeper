@@ -1,0 +1,32 @@
+{
+  "driver": {
+    "tag": "v1.9.3",
+    "commit": "6af367fbb6f90b4a4cbd4ab026d8d77e764039f8",
+    "sha256": {
+      "src/driver/controller-zfs/index.js": "9255b982a729a2971400234136d7940fa6b8db66b85dd071b61c217b01aab921",
+      "src/driver/controller-zfs-generic/index.js": "a5f7c0e9cfd5f96956593ec67919a5e19af477a8279a4090bed7d2c9042a6c5c",
+      "src/driver/index.js": "e3481dc5ee7fe1583e8ac2c382e4acedfac3772b1f82b2afa9d25e675a2e670d",
+      "src/utils/zfs.js": "22e7ed3942135660182dd37508b64f68c4f918392870df7d25cc32175890f369",
+      "src/utils/zfs_local_exec_client.js": "50ac8922d05dfafa3125b173480119224ed01d89d28f2973387be613b4799a19",
+      "bin/democratic-csi": "4f5be439ec10a796ae7ccb6b100a580f3090ff07d2545baa3c621673c4dc6d3d",
+      "package.json": "2db6255ad2879e2141f56485c87e4a656d213d9ee659b76615c14dd8497dd8dd"
+    }
+  },
+  "csi": {
+    "tag": "v1.9.0",
+    "commit": "80d53107c70981b9da8aaf9cd1c90249562b22f0",
+    "sha256": "0b625eff0484fa61a1ddb06570a71c118e6af3b8f73e4d860f43d477412e4d55"
+  },
+  "transportProxy": {
+    "commit": "b91a9b5aa3754f3014f781100940a7e3dac83677",
+    "role": "UDS / authority rewriting only; no built-in mTLS client support assumed",
+    "sha256": {
+      "src/main.go": "d96fb40c28b098c9d2f0ca8ec39d0a2a076f02297f7d65158c418161e8e44267",
+      "src/helpers_unix.go": "553372f27fbf4bc7a1e4b9277729686ecfc20237c553af350b5d36d7103c0c49"
+    }
+  },
+  "protoc": "33.0",
+  "protocPlugin": "25.1.0",
+  "dart": "3.13.4",
+  "protocArchiveSha256": "d99c011b799e9e412064244f0be417e5d76c9b6ace13a2ac735330fa7d57ad8f"
+}

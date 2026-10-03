@@ -1,0 +1,2 @@
+# Preserve exact upstream schema bytes (including upstream trailing spaces).
+proto/** -whitespace

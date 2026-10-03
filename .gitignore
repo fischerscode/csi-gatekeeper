@@ -1,0 +1,11 @@
+.dart_tool/
+.packages
+build/
+coverage/
+*.key
+*.pem
+*.p12
+*.pfx
+*.sock
+.env
+config.local.json

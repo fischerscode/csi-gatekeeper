@@ -1,0 +1,32 @@
+name: csi_gatekeeper
+description: Fail-closed CSI controller gateway for a dedicated democratic-csi backend.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+dependencies:
+  grpc: 5.1.0
+  protobuf: 6.1.0
+  fixnum: 1.1.1
+  crypto: 3.0.7
+dev_dependencies:
+  melos: 8.9.0
+  protoc_plugin: 25.1.0
+  test: 1.32.0
+
+melos:
+  useRootAsPackage: true
+  scripts:
+    format: dart format bin lib test tool
+    format:check: dart format --output=none --set-exit-if-changed bin lib test tool
+    analyze: dart analyze
+    test: dart test
+    build: dart compile exe bin/csi_gatekeeper.dart -o build/csi-gatekeeper
+  command:
+    version:
+      branch: main
+      hooks:
+        preCommit: |
+          dart run tool/sync_version.dart
+          dart pub get --offline
+          git add lib/src/version.dart pubspec.lock
