@@ -55,7 +55,8 @@ scoped GitHub App token for release creation if automating that step later.
 
 ## License collection and policy
 
-The pinned development dependency [legal 0.1.1](https://pub.dev/packages/legal)
+The development dependency [legal](https://pub.dev/packages/legal), constrained
+to `^0.2.1` and resolved to 0.2.1 in the committed lockfile,
 scans locally resolved dependency manifests, package_config.json and pubspec.lock.
 Packaging uses its typed API to check the configured policy **and** render the
 original license/notice documents. It follows the runtime dependency closure,
@@ -65,12 +66,10 @@ closure even when AOT tree shaking removes some code. No network license lookup
 is performed after dependency resolution.
 
 The pubspec policy permits MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0 and ISC;
-unknown evidence fails the build. Two version-bound expression overrides record
-manual review of the Apache texts in grpc 5.1.0 and google_cloud 0.5.0. The first
-omits the optional application appendix; the second uses an HTTPS URL there.
-Sections 1-9 match Apache-2.0. The original files are preserved, and the reason
-appears in generated notices. Updating these versions requires a fresh review;
-no unrestricted package approval or incomplete generation is used.
+unknown evidence fails the build. Version 0.2.1 recognizes licenses offline using
+pana's bundled SPDX corpus, including the Apache texts in grpc and google_cloud.
+No active package overrides are needed for the current runtime closure. The
+renderer preserves the original license and notice documents.
 
 The wrapper additionally preserves nested LICENSE, LICENCE, COPYING and NOTICE
 files outside legal's root/`LICENSES` scan, vendored CSI/Google schema licenses
