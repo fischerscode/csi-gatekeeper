@@ -1,6 +1,6 @@
 name: csi_gatekeeper
 description: Fail-closed CSI controller gateway for a dedicated democratic-csi backend.
-version: 0.1.0
+version: 0.1.1
 publish_to: none
 repository: https://github.com/fischerscode/csi-gatekeeper
 environment:
