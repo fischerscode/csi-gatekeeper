@@ -1,5 +1,11 @@
 # CSI Gatekeeper
 
+> [!WARNING]
+> **Experimental software — not ready for production use.**
+> This project has not yet been validated against a real democratic-csi backend
+> or in a production deployment. Use it for evaluation and testing only; do not
+> rely on it to protect production storage. APIs and configuration may change.
+
 A standalone Linux Dart service that validates CSI controller requests before
 forwarding them to one protected democratic-csi Unix socket. The external endpoint
 requires mTLS and pins one explicitly authorized client leaf certificate. This is
