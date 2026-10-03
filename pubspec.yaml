@@ -2,6 +2,7 @@ name: csi_gatekeeper
 description: Fail-closed CSI controller gateway for a dedicated democratic-csi backend.
 version: 0.1.0
 publish_to: none
+repository: https://github.com/fischerscode/csi-gatekeeper
 environment:
   sdk: ">=3.13.0 <4.0.0"
 dependencies:
@@ -29,6 +30,7 @@ melos:
       branch: main
       workspaceChangelog: false
       fetchTags: false
+      releaseUrl: true
       hooks:
         preCommit: |
           dart run tool/sync_version.dart

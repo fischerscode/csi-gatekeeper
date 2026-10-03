@@ -112,7 +112,7 @@ tag fetching is disabled so local versioning does not require network access.
 The initial release keeps the existing application version:
 
 ```sh
-dart run melos version --all --manual-version=csi_gatekeeper:0.1.0 --yes --no-release-url
+dart run melos version --all --manual-version=csi_gatekeeper:0.1.0 --yes
 ```
 
 For later releases, fetch tags from the configured remote, ensure the working
