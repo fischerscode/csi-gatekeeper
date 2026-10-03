@@ -27,6 +27,8 @@ melos:
   command:
     version:
       branch: main
+      workspaceChangelog: false
+      fetchTags: false
       hooks:
         preCommit: |
           dart run tool/sync_version.dart

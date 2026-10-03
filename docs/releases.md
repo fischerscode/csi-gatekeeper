@@ -29,8 +29,8 @@ dependencies, runs formatting, analysis and tests, and runs the same normal buil
 on Ubuntu 24.04. Release packaging additionally binds BUILD_INFO to the tag.
 The release receives **two assets**: the complete ZIP and `SHA256SUMS`.
 
-Supported tags are the default Melos `csi_gatekeeper-v<VERSION>` and manual
-`v<VERSION>`. The tag must match pubspec.yaml and the committed executable version.
+Supported tags are `v<VERSION>` (the default Melos workspace tag) and
+`csi_gatekeeper-v<VERSION>` (package tags if workspace tagging is disabled). The tag must match pubspec.yaml and the committed executable version.
 A draft release or a plain tag push does not upload release assets. The binary
 target is Linux x64/glibc compatible with the Ubuntu 24.04 build runner; other
 architectures and older glibc versions are not promised.
@@ -99,3 +99,23 @@ Apache-2.0 requires its license and applicable NOTICE attribution. See the
 [Apache-2.0 section 4](https://www.apache.org/licenses/LICENSE-2.0) texts.
 The ZIP makes the materials accompany the binary. Automated checks do not certify
 license compatibility for future dependencies; review new terms during upgrades.
+
+## Changelog ownership
+
+Melos owns CHANGELOG.md and derives release entries from Conventional Commits.
+Do not maintain a parallel Unreleased section: Melos prepends a new version
+section and does not migrate hand-written pending entries. For this single root
+package, workspaceChangelog is disabled to avoid an aggregate changelog writing
+to the same file. Fetch tags explicitly before subsequent releases; automatic
+tag fetching is disabled so local versioning does not require network access.
+
+The initial release keeps the existing application version:
+
+```sh
+dart run melos version --all --manual-version=csi_gatekeeper:0.1.0 --yes --no-release-url
+```
+
+For later releases, fetch tags from the configured remote, ensure the working
+tree is clean, then use the normal Conventional Commit versioning command in
+the README. Melos produces an annotated workspace tag; publishing the matching
+GitHub release triggers the binary attachment workflow.

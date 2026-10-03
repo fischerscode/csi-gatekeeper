@@ -88,11 +88,13 @@ Use Conventional Commits (`feat:`, `fix:`, `docs:`, `build:`, `test:`, `chore:`)
 Melos manages changelog and versions, including this private application:
 
 ```sh
-# Run on main after reviewing changes; this creates a local commit and tag.
+# Run on main with a clean checkout after fetching remote tags.
+# This creates a local commit and tag; it does not publish.
 dart run melos version --all --no-release-url
 ```
 
-The version hook synchronizes the executable's Identity version and lockfile.
+Melos generates CHANGELOG.md from Conventional Commits; do not maintain a
+parallel Unreleased section. The version hook synchronizes the executable's Identity version and lockfile.
 The working tree and conventional commit history must be ready first. CI never
 runs versioning or deploys storage infrastructure. Publishing a GitHub release
 builds and attaches a Linux x64 ZIP containing the standalone executable and

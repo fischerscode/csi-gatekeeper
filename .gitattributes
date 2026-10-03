@@ -2,3 +2,5 @@
 proto/** -whitespace
 # Preserve checksummed upstream native license texts verbatim.
 licenses/dart-runtime/*.txt -whitespace
+# Melos-generated changelog entries end with a blank separator line.
+CHANGELOG.md whitespace=-blank-at-eof
