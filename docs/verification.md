@@ -15,7 +15,7 @@ protoc_plugin 25.1.0 and the committed pubspec.lock.
 | AOT executable with no arguments | Expected usage rejection, exit 64 |
 | AOT executable with placeholder example config | Expected sanitized configuration rejection, exit 1 |
 | `dart run melos run release:package -- v0.1.0` | ZIP with notices for 21 runtime packages generated; ZIP SHA-256 check passed |
-| `dart run legal check` | legal 0.2.1 policy passed for all 21 runtime packages without active overrides |
+| `dart run legal check` | legal 0.2.2 policy passed for all 21 runtime packages without active overrides |
 | actionlint 1.7.7 on both workflows | Passed |
 | Repeated release packaging | Removed stale ZIP entries; extracted ZIP preserved executable permissions |
 | Official CSI schema vs pinned driver's 1.9.0 schema | SHA-256 identical |

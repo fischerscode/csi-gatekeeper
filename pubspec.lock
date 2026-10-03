@@ -293,10 +293,10 @@ packages:
     dependency: "direct dev"
     description:
       name: legal
-      sha256: c3b169939239996fca3b4b5898526639b8f6d4132d28dc14ec3b991a4d7195df
+      sha256: "239179eeec718590b4a12e2d28524ba095d51ca4ea3d667d2f1570ab04b9bf88"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.1"
+    version: "0.2.2"
   lints:
     dependency: transitive
     description:
