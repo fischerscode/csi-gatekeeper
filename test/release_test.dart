@@ -1,35 +1,54 @@
 import 'dart:io';
 
-import 'package:dart_pubspec_licenses/dart_pubspec_licenses.dart';
+import 'package:legal/legal.dart';
 import 'package:test/test.dart';
 
 import '../tool/package_release.dart';
 
-Package fixture(
-  String name,
-  Directory directory, {
-  List<Package> dependencies = const [],
-  List<Package> devDependencies = const [],
-  String? license = 'Copyright fixture owner. Fixture license text.',
-}) => Package(
-  directory: directory,
-  name: name,
-  description: 'Fixture package',
-  authors: [],
-  isMarkdown: false,
-  isSdk: false,
-  version: '1.0.0',
-  license: license,
-  dependencies: dependencies,
-  devDependencies: devDependencies,
-  pubspec: {
-    'dependencies': {for (final p in dependencies) p.name: '1.0.0'},
-  },
-);
+List<Dependency> scanGraph({bool missing = false}) {
+  final nodes = [
+    {
+      'name': 'root',
+      'directDependencies': ['runtime'],
+      'devDependencies': ['tool'],
+    },
+    {
+      'name': 'runtime',
+      'directDependencies': ['shared'],
+      'source': 'path',
+      'version': '1.0.0',
+    },
+    if (!missing)
+      {
+        'name': 'shared',
+        'directDependencies': ['runtime'],
+        'source': 'path',
+        'version': '1.0.0',
+      },
+    {
+      'name': 'tool',
+      'directDependencies': ['shared'],
+      'source': 'path',
+      'version': '1.0.0',
+    },
+  ];
+  return const DependencyScanner().fromResolvedData(
+    projectName: 'root',
+    graph: {'packages': nodes},
+    packageConfig: {
+      'configVersion': 2,
+      'packages': [
+        for (final node in nodes)
+          {'name': node['name'], 'rootUri': './${node['name']}/'},
+      ],
+    },
+    packageConfigUri: Uri.file('/tmp/fixture/package_config.json'),
+  );
+}
 
 void main() {
   test(
-    'release tags bind both naming conventions to the committed version',
+    'release tags match the committed version in both naming conventions',
     () {
       validateReleaseTag('v1.2.3', '1.2.3');
       validateReleaseTag('csi_gatekeeper-v1.2.3', '1.2.3');
@@ -44,53 +63,101 @@ void main() {
       }
     },
   );
-  test('runtime closure includes shared transitive packages and excludes dev-only tools', () {
-    final dir = Directory.systemTemp;
-    final shared = fixture('shared', dir);
-    final tool = fixture('tool', dir, dependencies: [shared]);
-    final dep = fixture('runtime', dir, dependencies: [shared]);
-    final root = fixture(
-      'root',
-      dir,
-      dependencies: [dep],
-      devDependencies: [tool, shared],
-    );
-    expect(runtimePackages(root).map((p) => p.name), ['runtime', 'shared']);
-    dep.dependencies.add(dep); // Mutable fixture models a graph cycle.
-    expect(runtimePackages(root).map((p) => p.name), ['runtime', 'shared']);
+  test('legal includes shared runtime transitives, excludes dev-only tools and handles cycles', () {
+    expect(scanGraph().map((p) => p.name), ['runtime', 'shared']);
   });
-  test('unresolved declared dependency fails rather than silently omitting notices', () {
-    final root = fixture('root', Directory.systemTemp);
-    (root.pubspec!['dependencies'] as Map)['missing'] = '1.0.0';
-    expect(() => runtimePackages(root), throwsStateError);
+  test('legal rejects unresolved runtime dependencies', () {
+    expect(() => scanGraph(missing: true), throwsA(isA<LegalException>()));
   });
-  test('missing licenses block packaging and complete NOTICE/COPYING texts are retained', () async {
-    final dir = await Directory.systemTemp.createTemp('csi-release-license-');
-    try {
-      await File('${dir.path}/NOTICE')
-          .writeAsString('Additional attribution required');
-      await File('${dir.path}/COPYING')
-          .writeAsString('Supplementary license text');
-      await Directory('${dir.path}/nested').create();
-      await File('${dir.path}/nested/LICENSE')
-          .writeAsString('Nested dependency copyright');
-      final package = fixture('runtime', dir);
-      final text = await packageNotices([package]);
-      for (final expected in [
-        'runtime 1.0.0',
-        'Copyright fixture owner',
-        'Additional attribution required',
-        'Supplementary license text',
-        'Nested dependency copyright',
-      ]) {
-        expect(text, contains(expected));
+  test(
+    'policy rejects missing evidence and renderer preserves complete documents',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('csi-legal-');
+      try {
+        final dependency = Dependency(
+          name: 'fixture',
+          version: '1.0.0',
+          root: dir.uri,
+          source: 'path',
+          direct: true,
+        );
+        final policy = LegalConfig.fromMap({
+          'policy': 'permissive',
+          'unknown': 'deny',
+        }).policy;
+        await File('${dir.path}/pubspec.yaml')
+            .writeAsString('name: fixture\nversion: 1.0.0\n');
+        final missing = await const LicenseDetector().detect(dependency);
+        expect(
+          () => checkedNotices(LicenseReport([missing]), policy),
+          throwsStateError,
+        );
+        // A real known license exercises legal's full-text recognition.
+        final original = await File(
+          'licenses/dart-runtime/double-conversion.txt',
+        ).readAsString();
+        await File('${dir.path}/LICENSE').writeAsString(original);
+        await File('${dir.path}/NOTICE')
+            .writeAsString('Required fixture attribution');
+        await Directory('${dir.path}/nested').create();
+        await File('${dir.path}/nested/COPYING').writeAsString('Nested terms');
+        final report = LicenseReport([
+          await const LicenseDetector().detect(dependency),
+        ]);
+        final text = checkedNotices(report, policy);
+        expect(text, contains(original));
+        expect(text, contains('Required fixture attribution'));
+        expect(await nestedNotices(report), contains('Nested terms'));
+      } finally {
+        await dir.delete(recursive: true);
       }
-      await expectLater(
-        packageNotices([fixture('unlicensed', dir, license: null)]),
-        throwsStateError,
-      );
-    } finally {
-      await dir.delete(recursive: true);
-    }
-  });
+    },
+  );
+  test(
+    'ZIP retains binary and notices together and removes stale archive entries',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('csi-zip-');
+      try {
+        final bundle = await Directory('${dir.path}/bundle').create();
+        await File('${bundle.path}/csi-gatekeeper')
+            .writeAsString('fixture binary');
+        await Process.run('chmod', ['755', '${bundle.path}/csi-gatekeeper']);
+        await File('${bundle.path}/THIRD_PARTY_NOTICES.txt')
+            .writeAsString('fixture notices');
+        final archive = File('${dir.path}/bundle.zip');
+        await File('${bundle.path}/stale').writeAsString('stale');
+        await createZip(bundle, archive);
+        await File('${bundle.path}/stale').delete();
+        await createZip(bundle, archive);
+        final listing = await Process.run('unzip', ['-Z1', archive.path]);
+        expect(listing.exitCode, 0);
+        expect(listing.stdout, contains('bundle/csi-gatekeeper'));
+        expect(listing.stdout, contains('bundle/THIRD_PARTY_NOTICES.txt'));
+        expect(listing.stdout, isNot(contains('stale')));
+        final unpacked = '${dir.path}/unpacked';
+        expect(
+          (await Process.run('unzip', [
+            '-q',
+            archive.path,
+            '-d',
+            unpacked,
+          ])).exitCode,
+          0,
+        );
+        expect(
+          (await Process.run('test', [
+            '-x',
+            '$unpacked/bundle/csi-gatekeeper',
+          ])).exitCode,
+          0,
+        );
+        expect(
+          await File('$unpacked/bundle/THIRD_PARTY_NOTICES.txt').readAsString(),
+          'fixture notices',
+        );
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    },
+  );
 }

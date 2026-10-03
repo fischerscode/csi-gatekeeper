@@ -10,7 +10,7 @@ dependencies:
   fixnum: 1.1.1
   crypto: 3.0.7
 dev_dependencies:
-  dart_pubspec_licenses: 3.2.0
+  legal: 0.1.1
   melos: 8.9.0
   protoc_plugin: 25.1.0
   test: 1.32.0
@@ -23,7 +23,7 @@ melos:
     analyze: dart analyze
     test: dart test
     release:package: dart run tool/package_release.dart
-    build: dart compile exe bin/csi_gatekeeper.dart -o build/csi-gatekeeper
+    build: dart run tool/build.dart
   command:
     version:
       branch: main
@@ -32,3 +32,17 @@ melos:
           dart run tool/sync_version.dart
           dart pub get --offline
           git add lib/src/version.dart pubspec.lock
+
+legal:
+  policy: permissive
+  unknown: deny
+  packages:
+    overrides:
+      grpc:
+        versions: '5.1.0'
+        expression: Apache-2.0
+        reason: 'Reviewed LICENSE: Apache-2.0 sections 1-9 match; optional application appendix is omitted.'
+      google_cloud:
+        versions: '0.5.0'
+        expression: Apache-2.0
+        reason: 'Reviewed LICENSE: Apache-2.0 terms match; application appendix uses an HTTPS license URL.'

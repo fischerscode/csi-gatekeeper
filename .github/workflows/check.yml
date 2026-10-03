@@ -22,3 +22,11 @@ jobs:
           unzip -q /tmp/protoc.zip -d /tmp/protoc
           PROTOC_PATH=/tmp/protoc/bin/protoc tool/generate.sh
           git diff --exit-code -- lib/src/generated
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-x64-build
+          path: |
+            build/release/csi-gatekeeper-*-linux-x64.zip
+            build/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7

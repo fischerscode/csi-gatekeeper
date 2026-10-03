@@ -31,9 +31,7 @@ jobs:
         with:
           name: linux-x64-release
           path: |
-            build/release/csi-gatekeeper-*-linux-x64
-            build/release/csi-gatekeeper-*-linux-x64.tar.gz
-            build/release/THIRD_PARTY_NOTICES.txt
+            build/release/csi-gatekeeper-*-linux-x64.zip
             build/release/SHA256SUMS
           if-no-files-found: error
           retention-days: 7
@@ -55,4 +53,4 @@ jobs:
         run: |
           cd release
           sha256sum --check SHA256SUMS
-          gh release upload "$RELEASE_TAG" csi-gatekeeper-*-linux-x64 csi-gatekeeper-*-linux-x64.tar.gz THIRD_PARTY_NOTICES.txt SHA256SUMS
+          gh release upload "$RELEASE_TAG" csi-gatekeeper-*-linux-x64.zip SHA256SUMS

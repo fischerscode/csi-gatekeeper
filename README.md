@@ -23,13 +23,11 @@ dart pub get --enforce-lockfile
 dart run melos run format:check
 dart run melos run analyze
 dart run melos run test
-mkdir -p build
 dart run melos run build
-# Equivalent AOT build:
-dart compile exe bin/csi_gatekeeper.dart -o build/csi-gatekeeper
+# Distributable: build/release/csi-gatekeeper-0.1.0-linux-x64.zip
 ```
 
-Tests require Linux local sockets and OpenSSL on PATH. They generate temporary
+Build packaging requires `zip`; tests require `unzip`, Linux local sockets and OpenSSL on PATH. They generate temporary
 one-day test certificates outside the repository, start an actual gRPC fake
 backend on a Unix socket, and connect to the gateway using actual TLS clients.
 They require no ZFS, Proxmox, Kubernetes, or production credentials.
@@ -97,5 +95,6 @@ dart run melos version --all --no-release-url
 The version hook synchronizes the executable's Identity version and lockfile.
 The working tree and conventional commit history must be ready first. CI never
 runs versioning or deploys storage infrastructure. Publishing a GitHub release
-builds and attaches a Linux x64 executable, an archive with third-party license
-notices, and checksums. See [release packaging and licenses](docs/releases.md).
+builds and attaches a Linux x64 ZIP containing the standalone executable and
+third-party license notices, plus checksums. Normal CI builds offer the same ZIP.
+See [release packaging and licenses](docs/releases.md).

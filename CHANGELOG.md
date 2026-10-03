@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Build and attach Linux x64 binaries, license notices, archives and checksums on GitHub releases.
-- Collect runtime dependency licenses using dart_pubspec_licenses and preserve native Dart runtime notices.
+- Produce a Linux x64 ZIP containing the standalone binary and legal notices on every normal build; publish only ZIPs and checksums in CI and releases.
+- Check and collect runtime dependency licenses with pinned legal 0.1.1; preserve nested, Protobuf and native Dart runtime notices.
 
 ## 0.1.0
 

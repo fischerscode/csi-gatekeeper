@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:dart_pubspec_licenses/dart_pubspec_licenses.dart';
+import 'package:legal/legal.dart';
 
 import '../lib/src/version.dart';
 
@@ -13,89 +13,79 @@ void validateReleaseTag(String tag, String version) {
   }
 }
 
-/// A transitive package shared with a dev tool still belongs to the runtime set.
-List<Package> runtimePackages(Package root) {
-  final packages = <String, Package>{};
-  void visit(Package package) {
-    if (packages.containsKey(package.name)) return;
-    packages[package.name] = package;
-    final declared =
-        (package.pubspec?['dependencies'] as Map?)?.keys
-            .cast<String>()
-            .toSet() ??
-        <String>{};
-    final resolved = package.dependencies.map((p) => p.name).toSet();
-    if (!resolved.containsAll(declared)) {
-      throw StateError('Unresolved runtime dependency in ${package.name}');
-    }
-    for (final dependency in package.dependencies) {
-      visit(dependency);
-    }
+/// Enforce the project's policy before rendering original license/notice texts.
+String checkedNotices(LicenseReport report, LicensePolicy policy) {
+  final result = report.check(policy);
+  if (!result.isSuccess) {
+    throw StateError(
+      'License policy requires review: ${result.findings.where((f) => f.isFailure).map((f) => f.package.dependency.name).join(', ')}',
+    );
   }
-
-  for (final dependency in root.dependencies) {
-    visit(dependency);
-  }
-  final declared = (root.pubspec?['dependencies'] as Map).keys
-      .cast<String>()
-      .toSet();
-  if (!root.dependencies.map((p) => p.name).toSet().containsAll(declared)) {
-    throw StateError('Unresolved direct runtime dependency');
-  }
-  return packages.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  return report.renderThirdPartyLicenses(policy: policy);
 }
 
-/// Use the package's license collector; additionally retain any NOTICE/COPYING
-/// files, since license identification alone is insufficient for distribution.
-Future<String> packageNotices(List<Package> packages) async {
+/// Preserve additional nested vendored notices outside legal's root scan.
+Future<String> nestedNotices(LicenseReport report) async {
   final text = StringBuffer();
-  for (final package in packages) {
-    final license = package.license;
-    if (license == null || license.trim().isEmpty) {
-      throw StateError('Missing license for ${package.name}');
-    }
-    text.writeln('\n=== ${package.name} ${package.version} ===');
-    text.writeln(
-      'Source: ${package.repository ?? package.homepage ?? 'https://pub.dev/packages/${package.name}'}',
-    );
-    text.writeln(license);
-    final files = await package.directory
+  for (final package in report.packages) {
+    final directory = Directory.fromUri(package.dependency.root);
+    final known = package.documents.map((d) => d.path).toSet();
+    final files = await directory
         .list(recursive: true, followLinks: false)
         .where((e) => e is File)
         .cast<File>()
         .toList();
     files.sort((a, b) => a.path.compareTo(b.path));
     for (final file in files) {
-      final relative = file.path.substring(package.directory.path.length + 1);
+      final relative = file.path.substring(directory.path.length + 1);
       final name = file.uri.pathSegments.last.toUpperCase();
-      if (relative.startsWith('.git/') || relative.startsWith('.dart_tool/'))
+      if (known.contains(relative) ||
+          relative.startsWith('.git/') ||
+          relative.startsWith('.dart_tool/'))
         continue;
       if (name.startsWith('NOTICE') ||
           name.startsWith('COPYING') ||
-          name.startsWith('LICENSE')) {
-        final extra = await file.readAsString();
-        if (extra == license) continue;
-        text.writeln('\n--- $relative ---\n$extra');
+          name.startsWith('LICENSE') ||
+          name.startsWith('LICENCE')) {
+        text.writeln(
+          '\n--- ${package.dependency.name}: $relative ---\n${await file.readAsString()}',
+        );
       }
     }
   }
   return text.toString();
 }
 
+/// ZIPs are created fresh so repeated packaging cannot retain stale entries.
+Future<void> createZip(Directory bundle, File archive) async {
+  if (await archive.exists()) await archive.delete();
+  final result = await Process.run('zip', [
+    '-q',
+    '-r',
+    archive.absolute.path,
+    bundle.uri.pathSegments.where((s) => s.isNotEmpty).last,
+  ], workingDirectory: bundle.parent.path);
+  if (result.exitCode != 0) throw StateError('ZIP archive creation failed');
+}
+
 Future<void> packageRelease({
-  required String tag,
+  String? tag,
   String output = 'build/release',
 }) async {
-  validateReleaseTag(tag, packageVersion);
+  if (tag != null) validateReleaseTag(tag, packageVersion);
   if (!Platform.isLinux || !Platform.version.contains('linux_x64')) {
     throw StateError('This release profile supports Linux x64 only');
   }
-  final project = await listDependencies(
-    pubspecYamlPath: File('pubspec.yaml').absolute.path,
-  );
-  if (project.package.version != packageVersion)
+  final project = await LegalProject.load('.');
+  final pubspec = await File('pubspec.yaml').readAsString();
+  if (!RegExp(
+    '^version: ${RegExp.escape(packageVersion)}\\s*\$',
+    multiLine: true,
+  ).hasMatch(pubspec))
     throw StateError('Run tool/sync_version.dart before tagging');
-  final runtime = runtimePackages(project.package);
+  final report = await project.scan(includeDev: false);
+  final packageTexts = checkedNotices(report, project.config.policy);
+  final runtime = report.packages.map((p) => p.dependency).toList();
   final sdk = File(Platform.resolvedExecutable).parent.parent;
   final nativeRoot = Directory('licenses/dart-runtime');
   final manifest = jsonDecode(
@@ -116,7 +106,8 @@ Future<void> packageRelease({
           'A dependency may be removed by AOT tree shaking; notices are retained conservatively.\n'
           'These licenses do not set the license of CSI Gatekeeper itself.\n',
         )
-        ..write(await packageNotices(runtime))
+        ..write(packageTexts)
+        ..write(await nestedNotices(report))
         ..writeln(
           '\n=== Dart SDK ${manifest['sdkVersion']} / embedded runtime ===\n${await File('${sdk.path}/LICENSE').readAsString()}',
         );
@@ -160,7 +151,6 @@ Future<void> packageRelease({
   final binary = File('build/csi-gatekeeper');
   if (!await binary.exists())
     throw StateError('Build the AOT executable first');
-  await binary.copy('$output/$stem');
   await binary.copy('${bundle.path}/csi-gatekeeper');
   final licenseFile = File('$output/THIRD_PARTY_NOTICES.txt');
   await licenseFile.writeAsString(notices.toString());
@@ -187,16 +177,9 @@ Future<void> packageRelease({
         }) +
         '\n',
   );
-  final result = await Process.run('tar', [
-    '-czf',
-    '$output/$stem.tar.gz',
-    '-C',
-    staging.path,
-    stem,
-  ]);
-  if (result.exitCode != 0) throw StateError('Release archive creation failed');
+  await createZip(bundle, File('$output/$stem.zip'));
   final sums = StringBuffer();
-  for (final name in [stem, '$stem.tar.gz', 'THIRD_PARTY_NOTICES.txt']) {
+  for (final name in ['$stem.zip']) {
     sums.writeln(
       '${sha256.convert(await File('$output/$name').readAsBytes())}  $name',
     );
