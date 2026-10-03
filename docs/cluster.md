@@ -83,8 +83,27 @@ each controller sidecar's `--csi-address` to that socket. Set
 `--extra-create-metadata=false` on provisioner and snapshotter; CSI secret maps
 and parameter overrides are not supported by this profile. Use separate
 controller Deployments/endpoints, identity certificates, backend sockets and
-storage domains for NFS and iSCSI. Keep the CSI registration name consistent
-across the controller, StorageClass and node plugin (`org.democratic-csi` in v1).
+storage domains for NFS and iSCSI. Set each gateway's trusted `driverName` to its backend's democratic-csi
+`--csi-name` and node plugin name. Omitting `driverName` preserves the default
+`org.democratic-csi`. The gateway rejects a backend reporting a different name.
+
+For parallel NFS and iSCSI installations, adapt the
+[NFS configuration](../deploy/config.example.json) with
+`"driverName": "nfs.csi.atlas.local"` and use the separate
+[iSCSI configuration](../deploy/config.iscsi.example.json) with
+`"driverName": "iscsi.csi.atlas.local"`. Keep each installation's registration
+and Kubernetes resources consistent:
+
+| Setting | NFS | iSCSI |
+| --- | --- | --- |
+| Gateway `driverName` | `nfs.csi.atlas.local` | `iscsi.csi.atlas.local` |
+| Backend and node plugin `--csi-name` | `nfs.csi.atlas.local` | `iscsi.csi.atlas.local` |
+| CSIDriver `metadata.name` | `nfs.csi.atlas.local` | `iscsi.csi.atlas.local` |
+| StorageClass `provisioner` | `nfs.csi.atlas.local` | `iscsi.csi.atlas.local` |
+| VolumeSnapshotClass `driver` | `nfs.csi.atlas.local` | `iscsi.csi.atlas.local` |
+
+These names identify separate installations; requests cannot change the local
+name or select another backend.
 Use the compatible release's normal democratic-csi node configuration under
 Atlas review; do not expose the trusted controller's configuration to Kubernetes.
 

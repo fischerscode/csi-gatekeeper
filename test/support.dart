@@ -41,7 +41,7 @@ class Rig {
       throw StateError('Test certificate generation failed');
   }
 
-  Future<void> init({bool iscsi = false}) async {
+  Future<void> init({bool iscsi = false, String? driverName}) async {
     dir = await Directory.systemTemp.createTemp('csi-gatekeeper-test-');
     await openssl([
       'req',
@@ -129,6 +129,7 @@ class Rig {
           .convert(await File('${dir.path}/allowed.der').readAsBytes())
           .toString(),
       'profile': 'democratic-csi-1.9.3-${iscsi ? 'iscsi' : 'nfs'}',
+      if (driverName != null) 'driverName': driverName,
       'volumeParent': 'tank/atlas/cluster/volumes',
       'snapshotParent': 'tank/atlas/cluster/snapshots',
       'maxBytes': 1099511627776,
@@ -239,7 +240,7 @@ class FakeIdentity extends IdentityServiceBase {
     'GetPluginInfo',
     r,
     c,
-    GetPluginInfoResponse(name: 'org.democratic-csi', vendorVersion: '1.9.0'),
+    GetPluginInfoResponse(name: rig.config.driverName, vendorVersion: '1.9.0'),
   );
   @override
   Future<GetPluginCapabilitiesResponse> getPluginCapabilities(

@@ -48,7 +48,7 @@ carry no forwarded values. The same rules apply regardless of claimed namespace.
 
 | Method | Accepted inputs and restrictions | Backend use and checked outputs |
 |---|---|---|
-| GetPluginInfo | Empty request | Reads backend identity; proxy emits fixed `org.democratic-csi` and proxy version, no backend manifest |
+| GetPluginInfo | Empty request | Requires backend identity to exactly match trusted `driverName` (default `org.democratic-csi`); proxy emits that name and proxy version, no backend manifest |
 | GetPluginCapabilities | Empty request | Intersects backend controller-service/online/offline expansion with configured support; no topology |
 | Probe | Empty request | Backend readiness wrapper only; no request metadata |
 | ControllerGetCapabilities | Empty request | Intersects backend enum values with enabled method groups; no publish, condition, node enumeration, mutable/group operations or single-node-multi-writer |
