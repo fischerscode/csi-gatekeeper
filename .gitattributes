@@ -1,2 +1,4 @@
 # Preserve exact upstream schema bytes (including upstream trailing spaces).
 proto/** -whitespace
+# Preserve checksummed upstream native license texts verbatim.
+licenses/dart-runtime/*.txt -whitespace

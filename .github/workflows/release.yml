@@ -1,0 +1,58 @@
+name: Release executable
+on:
+  release:
+    types: [published]
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.event.release.id }}
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1
+        with:
+          sdk: '3.13.4'
+      - run: dart pub get --enforce-lockfile
+      - run: dart run melos run format:check
+      - run: dart run melos run analyze
+      - run: dart run melos run test
+      - run: mkdir -p build && dart run melos run build
+      - name: Package binary and third-party notices
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: dart run tool/package_release.dart "$RELEASE_TAG"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-x64-release
+          path: |
+            build/release/csi-gatekeeper-*-linux-x64
+            build/release/csi-gatekeeper-*-linux-x64.tar.gz
+            build/release/THIRD_PARTY_NOTICES.txt
+            build/release/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+  attach:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: linux-x64-release
+          path: release
+      - name: Attach assets to the published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          cd release
+          sha256sum --check SHA256SUMS
+          gh release upload "$RELEASE_TAG" csi-gatekeeper-*-linux-x64 csi-gatekeeper-*-linux-x64.tar.gz THIRD_PARTY_NOTICES.txt SHA256SUMS

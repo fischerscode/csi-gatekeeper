@@ -96,4 +96,6 @@ dart run melos version --all --no-release-url
 
 The version hook synchronizes the executable's Identity version and lockfile.
 The working tree and conventional commit history must be ready first. CI never
-runs versioning, publishes artifacts, or deploys storage infrastructure.
+runs versioning or deploys storage infrastructure. Publishing a GitHub release
+builds and attaches a Linux x64 executable, an archive with third-party license
+notices, and checksums. See [release packaging and licenses](docs/releases.md).

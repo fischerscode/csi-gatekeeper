@@ -1,0 +1,216 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:dart_pubspec_licenses/dart_pubspec_licenses.dart';
+
+import '../lib/src/version.dart';
+
+/// Melos uses package-prefixed tags; manual releases may use ordinary SemVer tags.
+void validateReleaseTag(String tag, String version) {
+  if (!{'v$version', 'csi_gatekeeper-v$version'}.contains(tag)) {
+    throw StateError('Release tag must match the committed package version');
+  }
+}
+
+/// A transitive package shared with a dev tool still belongs to the runtime set.
+List<Package> runtimePackages(Package root) {
+  final packages = <String, Package>{};
+  void visit(Package package) {
+    if (packages.containsKey(package.name)) return;
+    packages[package.name] = package;
+    final declared =
+        (package.pubspec?['dependencies'] as Map?)?.keys
+            .cast<String>()
+            .toSet() ??
+        <String>{};
+    final resolved = package.dependencies.map((p) => p.name).toSet();
+    if (!resolved.containsAll(declared)) {
+      throw StateError('Unresolved runtime dependency in ${package.name}');
+    }
+    for (final dependency in package.dependencies) {
+      visit(dependency);
+    }
+  }
+
+  for (final dependency in root.dependencies) {
+    visit(dependency);
+  }
+  final declared = (root.pubspec?['dependencies'] as Map).keys
+      .cast<String>()
+      .toSet();
+  if (!root.dependencies.map((p) => p.name).toSet().containsAll(declared)) {
+    throw StateError('Unresolved direct runtime dependency');
+  }
+  return packages.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+}
+
+/// Use the package's license collector; additionally retain any NOTICE/COPYING
+/// files, since license identification alone is insufficient for distribution.
+Future<String> packageNotices(List<Package> packages) async {
+  final text = StringBuffer();
+  for (final package in packages) {
+    final license = package.license;
+    if (license == null || license.trim().isEmpty) {
+      throw StateError('Missing license for ${package.name}');
+    }
+    text.writeln('\n=== ${package.name} ${package.version} ===');
+    text.writeln(
+      'Source: ${package.repository ?? package.homepage ?? 'https://pub.dev/packages/${package.name}'}',
+    );
+    text.writeln(license);
+    final files = await package.directory
+        .list(recursive: true, followLinks: false)
+        .where((e) => e is File)
+        .cast<File>()
+        .toList();
+    files.sort((a, b) => a.path.compareTo(b.path));
+    for (final file in files) {
+      final relative = file.path.substring(package.directory.path.length + 1);
+      final name = file.uri.pathSegments.last.toUpperCase();
+      if (relative.startsWith('.git/') || relative.startsWith('.dart_tool/'))
+        continue;
+      if (name.startsWith('NOTICE') ||
+          name.startsWith('COPYING') ||
+          name.startsWith('LICENSE')) {
+        final extra = await file.readAsString();
+        if (extra == license) continue;
+        text.writeln('\n--- $relative ---\n$extra');
+      }
+    }
+  }
+  return text.toString();
+}
+
+Future<void> packageRelease({
+  required String tag,
+  String output = 'build/release',
+}) async {
+  validateReleaseTag(tag, packageVersion);
+  if (!Platform.isLinux || !Platform.version.contains('linux_x64')) {
+    throw StateError('This release profile supports Linux x64 only');
+  }
+  final project = await listDependencies(
+    pubspecYamlPath: File('pubspec.yaml').absolute.path,
+  );
+  if (project.package.version != packageVersion)
+    throw StateError('Run tool/sync_version.dart before tagging');
+  final runtime = runtimePackages(project.package);
+  final sdk = File(Platform.resolvedExecutable).parent.parent;
+  final nativeRoot = Directory('licenses/dart-runtime');
+  final manifest = jsonDecode(
+    await File('${nativeRoot.path}/sources.json').readAsString(),
+  ) as Map<String, dynamic>;
+  if ((await File('${sdk.path}/version').readAsString()).trim() !=
+          manifest['sdkVersion'] ||
+      (await File('${sdk.path}/revision').readAsString()).trim() !=
+          manifest['sdkRevision']) {
+    throw StateError(
+      'Dart SDK changed: review and update the native license manifest',
+    );
+  }
+  final notices =
+      StringBuffer(
+          'Third-party notices for CSI Gatekeeper $packageVersion\n'
+          'Runtime dependency closure; development tools are excluded.\n'
+          'A dependency may be removed by AOT tree shaking; notices are retained conservatively.\n'
+          'These licenses do not set the license of CSI Gatekeeper itself.\n',
+        )
+        ..write(await packageNotices(runtime))
+        ..writeln(
+          '\n=== Dart SDK ${manifest['sdkVersion']} / embedded runtime ===\n${await File('${sdk.path}/LICENSE').readAsString()}',
+        );
+  for (final entry
+      in (manifest['files'] as List).cast<Map<String, dynamic>>()) {
+    final file = File('${nativeRoot.path}/${entry['file']}');
+    final bytes = await file.readAsBytes();
+    if (sha256.convert(bytes).toString() != entry['sha256'])
+      throw StateError('Native license checksum mismatch');
+    notices.writeln(
+      '\n=== Dart native dependency: ${entry['file']} ===\nSource: ${entry['source']}\n${utf8.decode(bytes)}',
+    );
+  }
+  for (final file in [
+    'proto/NOTICE.md',
+    'proto/LICENSE',
+    'proto/google/LICENSE',
+  ]) {
+    notices.writeln(
+      '\n=== Vendored source: $file ===\n${await File(file).readAsString()}',
+    );
+  }
+  // CSI and Google schema copyright headers supplement the full license texts.
+  for (final file in [
+    'proto/csi.proto',
+    'proto/google/protobuf/timestamp.proto',
+    'proto/google/protobuf/wrappers.proto',
+    'proto/google/protobuf/descriptor.proto',
+  ]) {
+    final header = (await File(file).readAsLines())
+        .takeWhile((line) => line.startsWith('//') || line.trim().isEmpty)
+        .join('\n');
+    notices.writeln('\n--- $file attribution ---\n$header');
+  }
+  await Directory(output).create(recursive: true);
+  final staging = await Directory('$output/.bundle').create(recursive: true);
+  final stem = 'csi-gatekeeper-$packageVersion-linux-x64';
+  final bundle = Directory('${staging.path}/$stem');
+  if (await bundle.exists()) await bundle.delete(recursive: true);
+  await bundle.create(recursive: true);
+  final binary = File('build/csi-gatekeeper');
+  if (!await binary.exists())
+    throw StateError('Build the AOT executable first');
+  await binary.copy('$output/$stem');
+  await binary.copy('${bundle.path}/csi-gatekeeper');
+  final licenseFile = File('$output/THIRD_PARTY_NOTICES.txt');
+  await licenseFile.writeAsString(notices.toString());
+  await licenseFile.copy('${bundle.path}/THIRD_PARTY_NOTICES.txt');
+  await File('README.md').copy('${bundle.path}/README.md');
+  final docs = await Directory('${bundle.path}/docs').create();
+  await for (final file in Directory('docs').list()) {
+    if (file is File)
+      await file.copy('${docs.path}/${file.uri.pathSegments.last}');
+  }
+  final deploy = await Directory('${bundle.path}/deploy').create();
+  await for (final file in Directory('deploy').list()) {
+    if (file is File)
+      await file.copy('${deploy.path}/${file.uri.pathSegments.last}');
+  }
+  await File('${bundle.path}/BUILD_INFO.json').writeAsString(
+    const JsonEncoder.withIndent('  ').convert({
+          'version': packageVersion,
+          'tag': tag,
+          'platform': 'linux-x64',
+          'dartVersion': manifest['sdkVersion'],
+          'dartRevision': manifest['sdkRevision'],
+          'runtimePackages': {for (final p in runtime) p.name: p.version},
+        }) +
+        '\n',
+  );
+  final result = await Process.run('tar', [
+    '-czf',
+    '$output/$stem.tar.gz',
+    '-C',
+    staging.path,
+    stem,
+  ]);
+  if (result.exitCode != 0) throw StateError('Release archive creation failed');
+  final sums = StringBuffer();
+  for (final name in [stem, '$stem.tar.gz', 'THIRD_PARTY_NOTICES.txt']) {
+    sums.writeln(
+      '${sha256.convert(await File('$output/$name').readAsBytes())}  $name',
+    );
+  }
+  await File('$output/SHA256SUMS').writeAsString(sums.toString());
+  stdout.writeln(
+    'Packaged $stem with notices for ${runtime.length} runtime Dart packages',
+  );
+}
+
+Future<void> main(List<String> args) async {
+  if (args.length != 1)
+    throw const FormatException(
+      'Usage: dart run tool/package_release.dart RELEASE_TAG',
+    );
+  await packageRelease(tag: args.single);
+}

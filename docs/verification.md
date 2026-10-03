@@ -9,11 +9,14 @@ protoc_plugin 25.1.0 and the committed pubspec.lock.
 | `dart run melos list` | Exactly one package, csi_gatekeeper |
 | `dart run melos run format:check` | Passed |
 | `dart run melos run analyze` | No issues |
-| `dart run melos run test` | 24 tests passed |
+| `dart run melos run test` | 28 tests passed |
 | `dart run melos run build` | Native AOT executable generated in build/csi-gatekeeper |
 | `PROTOC_PATH=... tool/generate.sh` | Source checksums passed; generated Dart files byte-identical on regeneration |
 | AOT executable with no arguments | Expected usage rejection, exit 64 |
 | AOT executable with placeholder example config | Expected sanitized configuration rejection, exit 1 |
+| `dart run melos run release:package -- v0.1.0` | Binary, archive and notices generated for 21 runtime packages; all three SHA-256 checks passed |
+| actionlint 1.7.7 on both workflows | Passed |
+| Repeated release packaging | Removed stale staging content; archive preserved executable permissions |
 | Official CSI schema vs pinned driver's 1.9.0 schema | SHA-256 identical |
 
 The fake-backend suite records typed calls over a real Unix socket. Requests
